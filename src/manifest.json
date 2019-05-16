@@ -1,0 +1,16 @@
+{
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "my-command",
+      "identifier": "quicktextoverride.my-command-identifier",
+      "script": "./my-command.js"
+    }
+  ],
+  "menu": {
+    "title": "QuickTextOverride",
+    "items": [
+      "quicktextoverride.my-command-identifier"
+    ]
+  }
+}
