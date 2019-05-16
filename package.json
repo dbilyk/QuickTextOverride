@@ -1,6 +1,6 @@
 {
   "name": "quicktextoverride",
-  "description": "",
+  "description": "Use a key command to target the first text override of a symbol.",
   "version": "0.1.0",
   "engines": {
     "sketch": ">=49.0"
@@ -23,5 +23,9 @@
   "devDependencies": {
     "@skpm/builder": "^0.7.0"
   },
-  "author": "Dmitri Bilyk <dmitri.bilyk@gmail.com>"
+  "author": "Dmitri Bilyk <dmitri.bilyk@gmail.com>",
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/dbilyk/QuickTextOverride"
+  }
 }

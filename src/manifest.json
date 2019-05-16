@@ -2,9 +2,10 @@
   "icon": "icon.png",
   "commands": [
     {
-      "name": "my-command",
+      "name": "Run",
       "identifier": "quicktextoverride.my-command-identifier",
-      "script": "./my-command.js"
+      "script": "./my-command.js",
+      "shortcut": "shift + control + T"
     }
   ],
   "menu": {
