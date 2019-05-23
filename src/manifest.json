@@ -4,7 +4,7 @@
     {
       "name": "Run",
       "identifier": "quicktextoverride.my-command-identifier",
-      "script": "./my-command.js",
+      "script": "./main.js",
       "shortcut": "shift + control + T"
     }
   ],
