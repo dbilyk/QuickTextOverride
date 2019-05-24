@@ -1,7 +1,5 @@
 import sketch from 'sketch'
 
-
-
 export default function(context) {
   let qto = new QuickTextOverride(context)
   let alert = new Alert(context)
@@ -93,6 +91,7 @@ function QuickTextOverride(context,document){
 
 
 
+
 function Alert(context){
   let viewWidth = 300, viewHeight = 60;
   
@@ -110,7 +109,20 @@ function Alert(context){
   alert.setAccessoryView(view);
   
   //text field
+
+
   let textField = NSTextField.alloc().initWithFrame(NSMakeRect(0, 0, 300, 60));
+
+  // NSEvent.addLocalMonitorForEventsMatchingMask_handler(
+  //   (NSLeftMouseDown | NSLeftMouseDownMask | NSRightMouseDown | NSRightMouseDownMask), 
+  //   block('NSEvent*', 
+  //     function(event) {
+  //     // self.statusItemClicked(self.statusItem().button());
+  //     // return null;
+  //     console.log("h")
+  // }))
+  
+  
 
   //focuses the text field automatcially
   alert.window().setInitialFirstResponder(textField)
