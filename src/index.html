@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      *{
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .instructions{
+        color:#777;
+        margin:30px 30px 10px 30px;
+        margin-left: 30px;
+        font-size: 14px;
+      }
+
+      
+      .labels{
+        margin-left:30px;
+      }
+
+      .labels button{
+        margin:0px 10px 10px 0;
+        border: 1px solid #cccccc;
+        border-radius: 5px;
+        display: inline-block;
+        color:#777;
+        padding:5px;
+        box-shadow: 0 2px 4px 0 rgba(255, 255, 255, 0);
+        background-color: #fff0;
+        margin-right:10px;
+        font-size:15px;
+        font-weight:400;
+        transition:all 0.2s ease-in-out;
+      }
+
+      .labels .active_override{
+        border: 1px solid rgba(255, 255, 255, 0);
+        background-color: #0c5bb3;
+        color:white;
+        box-shadow: 0 2px 4px 0 #555;
+        transition:all 0.2s ease-in-out;
+      }
+
+      .inputFlex{
+        display:flex;
+      }
+
+      textarea {
+        padding: 10px;
+        font-size:16px;
+        margin-left:30px;
+        margin-right: 30px;
+        border:1px solid #ccc;
+        border-radius:5px;
+        width:80vw;
+        flex:1 1 auto;
+        justify-self: center;
+        height:50px;
+        
+      }
+
+    </style>
+  </head>
+  <body>
+    <div class= "instructions"><strong>Tab:</strong> Go to next text. <br> <strong>Shift + Tab:</strong> Go to previous text.</div>
+
+    <div class="labels">
+      
+    </div>
+
+    <div class=inputFlex>
+      <textarea placeholder="hello" autofocus></textarea>
+    </div>
+
+    <script>
+      let debug = (arg)=>{
+        document.getElementsByTagName("body")[0].append(arg.toString())
+        // let br = document.createElement("br")
+        // document.getElementsByTagName("body")[0].appendChild(br)
+      }
+
+      //these actions are received from sketch-side.
+      let _actions, _keyEvents
+      let ui = new QTO_UI()
+
+      
+
+      window.getMessage = function(action){
+        switch(action.type){
+          case "SYNC_ACTIONS": 
+            _actions = action.body
+            break;
+
+          case "SYNC_KEYEVENTS":
+            console.log(action.body)
+            _keyEvents = action.body
+            ui.startSendingKeyEvents()
+            break;
+
+          case _actions.setPickerValues:
+            ui.setPickerValues(action.body)
+            break;
+          
+          case _actions.setSelectedOverride:
+            ui.setSelectedOverride(action.body)
+            break;
+
+          case _actions.updateTextFieldContent:
+            ui.setContent(action.body)
+            break;
+
+          default:
+            debug("no matching event!");
+            break;
+        }
+      }
+      
+
+      function QTO_UI(){
+        
+        let _pickerValues = []
+        let _activeIndex = undefined
+        let _activeClass = "active_override"
+
+        let labelContainer = document.getElementsByClassName("labels")[0]
+        let textField = document.getElementsByTagName("textarea")[0]
+
+        this.startSendingKeyEvents = ()=>{
+          //notify "backend" about key events
+          document.addEventListener("keydown",(e)=>{
+            
+            if(!e.shiftKey && e.code == "Tab"){
+              e.preventDefault()
+              window.postMessage(_keyEvents.tabForward, textField.value)
+              
+            }
+
+            if(e.shiftKey && e.code == "Tab"){
+              e.preventDefault()
+              window.postMessage(_keyEvents.tabBackward, textField.value)
+            }
+
+            if(e.code == "Enter"){
+              window.postMessage(_keyEvents.enter, textField.value)
+            }
+
+            if(e.code == "Escape"){
+              window.postMessage(_keyEvents.escape)
+            }
+          })
+        }
+
+        this.setPickerValues = (pickerValues) =>{
+
+          pickerValues.map((v,i)=>{
+            let newElement = document.createElement("button")
+            newElement.innerText = v
+            
+            if(i == 0){
+              newElement.classList.add(_activeClass)
+              _activeIndex = 0
+            }
+
+            labelContainer.appendChild(newElement)
+
+            _pickerValues.push({
+              text:v,
+              element: newElement
+            })
+          })
+
+        }
+
+        this.setSelectedOverride = (arg)=>{
+          _pickerValues.map((v,i)=>{
+            _pickerValues[i].element.classList.remove(_activeClass)
+          })
+
+          if(typeof arg == "number"){
+            _pickerValues[arg].element.classList.add(_activeClass) 
+            _activeIndex = arg
+          }
+          else if(typeof arg == "string"){
+            let index = _pickerValues.findIndex((x)=>(x.text === arg))
+            _pickerValues[index].element.classList.add(_activeClass)
+            _activeIndex = index
+          }
+          else{
+            throw "invalid argument to setActiveOverride.  Argument must be an index or an override name."
+          }
+        }
+
+        this.setContent = (newContent)=>{
+          textField.value = newContent
+        }
+      }
+
+      
+      
+      
+    </script>
+  </body>
+</html>

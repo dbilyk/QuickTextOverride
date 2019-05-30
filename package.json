@@ -29,6 +29,7 @@
     "url": "https://github.com/dbilyk/QuickTextOverride"
   },
   "dependencies": {
-    "cocoascript-class": "^0.1.2"
+    "cocoascript-class": "^0.1.2",
+    "sketch-module-web-view": "^3.0.7"
   }
 }
