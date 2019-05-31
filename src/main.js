@@ -114,17 +114,21 @@ function QuickTextOverride(context){
   let onTabForward = (contentBeforeChange)=>{
     textOverrides[currentOverrideIndex].override.value = contentBeforeChange
     this.goToNextOverride()
+    //context.document.reloadInspector()
     console.log("tab forward")
   }
 
   let onTabBackward = (contentBeforeChange)=>{
     textOverrides[currentOverrideIndex].override.value = contentBeforeChange
     this.goToPreviousOverride()
+    //context.document.reloadInspector()
     console.log("tab back")
   }
     
-  let onEnter = ()=>{
-    textOverrides[currentOverrideIndex].override.value = contentBeforeChange
+  //PROBLEM HERE! ------------------------------------------------------------------------------------------<<<<<<<<<<
+  let onEnter = (contentBeforeClose)=>{
+    textOverrides[currentOverrideIndex].override.value = contentBeforeClose
+    pluginUI.close()
     console.log("enter")
   }
 
@@ -138,7 +142,14 @@ function QuickTextOverride(context){
 function PluginUI(){
   console.log("_______________________________________________________________")
   let _ui
-  
+  let windowWidth = 800,
+      windowHeight = 250,
+      screenHeight = NSHeight(NSScreen.mainScreen().frame()),
+      screenWidth = NSWidth(NSScreen.mainScreen().frame()),
+      xPosition = (screenWidth/2) - (windowWidth/2),
+      yPosition = (screenHeight) - (windowHeight/2)
+
+
   let emit = (type,body, callback)=>{
 
     if(!_ui){
@@ -219,7 +230,17 @@ function PluginUI(){
   this.open = (callback)=>{
     if(_ui !== undefined) return
     
-    _ui = new WebView({identifier:"000"})
+    _ui = new WebView({
+      identifier:"000",
+      width:windowWidth,
+      height:windowHeight,
+      useContentSize: true,
+      x: xPosition,
+      y: yPosition,
+      alwaysOnTop:true,
+      title:" ",
+      backgroundColor:"#ffffffff"
+    })
     _ui.loadURL(require("./index.html"))
     
     _startListeners()
@@ -228,9 +249,10 @@ function PluginUI(){
       ()    => {callback()},
       (err) => {error(err)}
     )
-    
-    
-   
+  }
+
+  this.close = ()=>{
+    _ui.close()
   }
 
   this.syncKeyEvents = ()=>{
