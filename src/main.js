@@ -1,15 +1,16 @@
 import sketch from 'sketch'
 import WebView from "sketch-module-web-view"
-
+var Shape =  require("sketch/dom").Shape
+var Settings = require('sketch/settings')
+//var Rectangle = require('sketch/dom').Rectangle
 
 export default function(context) {
   let qto = new QuickTextOverride(context)
 
   if(qto.isValidSelection()){
     qto.assembleTextOverrides()
-
+    
     if(qto.getOverrideList().length > 0){
-      //qto.showUI()
       qto.openWebView()
     }
   }
@@ -21,7 +22,15 @@ function QuickTextOverride(context){
       currentOverrideIndex,
       selection = (context.selection[0]) ? sketch.fromNative(context.selection[0]) : null,
       textOverrides = [],
+      overrideOutline = new Shape({
+        name:"currentOverride",
+        locked: true,
+        style:{
+          borders:[{color:'#4466FF44',thickness:2}]
+        }
+      }),
       pluginUI = new PluginUI()
+      
 
   //is this a symbol with overrides?
   this.isValidSelection = ()=>{
@@ -46,7 +55,10 @@ function QuickTextOverride(context){
       if(currentOverride.property == "stringValue"){
         textOverrides.push({
           label:currentOverride.affectedLayer.name, 
-          override:currentOverride
+          override:currentOverride,
+          currentValue: currentOverride.value,
+          defaultValue: currentOverride.affectedLayer.text
+
         })
       }
     }
@@ -57,47 +69,66 @@ function QuickTextOverride(context){
     return [...textOverrides]
   }
 
-  // this.showUI = () => {
-  //   // let overrideName = textOverride.affectedLayer.name
-  //   // let currentOverrideValue = textOverride.value
-  //   // let isOverridden = (overrideName !== currentOverrideValue)?true:false
-  
-  //   let dialog = new Alert(context)
-
-  //   //set the current override we're displaying
-  //   currentOverrideIndex = 0
-  //   let response = dialog.show(textOverrides[currentOverrideIndex].label,textOverrides[currentOverrideIndex].override.value)
-  
-  //   //handle dialog
-  //   if(response == 1000){
-  //     textOverrides[currentOverrideIndex].override.value = dialog.getCurrentValue()
-  //   }
-  //   else{
-  //     return
-  //   }
-  // }
-
   this.openWebView = () => {
     assignDelegatesToUI()
     let pickerValues = textOverrides.map((v)=>v.label)
+    let placeholders = textOverrides.map((v)=>v.defaultValue)
 
     pluginUI.open(()=>{
-      pluginUI.syncKeyEvents()
-      pluginUI.setPickerValues(pickerValues)
-      currentOverrideIndex = 0
-      pluginUI.setTextFieldContent(textOverrides[currentOverrideIndex].override.value)
-      pluginUI.setSelectedOverride(currentOverrideIndex)
+      this.setInitialOverride(pickerValues,placeholders)
     })
+  }
+
+
+  this.setInitialOverride = (pickerValues, placeholders)=>{
+      pluginUI.syncKeyEvents()
+      currentOverrideIndex = 0
+      pluginUI.setPickerValues(pickerValues)
+      pluginUI.setPlaceholders(placeholders)
+      pluginUI.setSelectedOverride(currentOverrideIndex)
+      pluginUI.setTextFieldContent(textOverrides[currentOverrideIndex].currentValue)
+  }
+  
+  // this.addOutlineToDocument = ()=>{
+  //   this.getActivePage().layers.push(overrideOutline)
+  // }
+
+
+  // this.getActivePage = ()=>{
+  //   return sketch.fromNative(context.document).pages.find((v)=>v.selected)
+  // }
+
+
+
+  // this.positionOverrideOutlineOnCurrentOverride = ()=>{
+
+  // }
+
+  // this.getLayerFrameInPageSpace = (layer)=>{
+    
+  // }
+
+
+  this.saveCurrentOverride = (content)=>{
+    textOverrides[currentOverrideIndex].override.value = content
+    textOverrides[currentOverrideIndex].override.selected = false
+    textOverrides[currentOverrideIndex].currentValue = content
   }
 
   this.goToNextOverride = ()=>{
     currentOverrideIndex = (currentOverrideIndex + 1) % textOverrides.length
-    pluginUI.setTextFieldContent(textOverrides[currentOverrideIndex].override.value)
+    pluginUI.setTextFieldContent(textOverrides[currentOverrideIndex].currentValue)
     pluginUI.setSelectedOverride(currentOverrideIndex)
   }
   this.goToPreviousOverride = ()=>{
     currentOverrideIndex = (currentOverrideIndex - 1 + textOverrides.length) % textOverrides.length
-    pluginUI.setTextFieldContent(textOverrides[currentOverrideIndex].override.value)
+    pluginUI.setTextFieldContent(textOverrides[currentOverrideIndex].currentValue)
+    pluginUI.setSelectedOverride(currentOverrideIndex)
+  }
+
+  this.goToOverride = (index)=>{
+    currentOverrideIndex = index
+    pluginUI.setTextFieldContent(textOverrides[currentOverrideIndex].currentValue)
     pluginUI.setSelectedOverride(currentOverrideIndex)
   }
 
@@ -109,31 +140,35 @@ function QuickTextOverride(context){
     pluginUI.tabBackwardDelegate = onTabBackward
     pluginUI.enterDelegate       = onEnter
     pluginUI.escapeDelegate      = onEscape
+    pluginUI.clickOverrideDelegate = onClickOverride
   }
 
   let onTabForward = (contentBeforeChange)=>{
-    textOverrides[currentOverrideIndex].override.value = contentBeforeChange
+    this.saveCurrentOverride(contentBeforeChange)
     this.goToNextOverride()
-    //context.document.reloadInspector()
-    console.log("tab forward")
+    
   }
 
   let onTabBackward = (contentBeforeChange)=>{
-    textOverrides[currentOverrideIndex].override.value = contentBeforeChange
+    this.saveCurrentOverride(contentBeforeChange)
     this.goToPreviousOverride()
-    //context.document.reloadInspector()
-    console.log("tab back")
+
   }
     
-  //PROBLEM HERE! ------------------------------------------------------------------------------------------<<<<<<<<<<
+  
   let onEnter = (contentBeforeClose)=>{
-    textOverrides[currentOverrideIndex].override.value = contentBeforeClose
+    this.saveCurrentOverride(contentBeforeClose)
     pluginUI.close()
-    console.log("enter")
+    
   }
 
   let onEscape = ()=>{
-    console.log("escape")
+    
+  }
+
+  let onClickOverride = (index,currentContent)=>{
+    this.saveCurrentOverride(currentContent)
+    this.goToOverride(index)
   }
 
 }
@@ -143,11 +178,14 @@ function PluginUI(){
   console.log("_______________________________________________________________")
   let _ui
   let windowWidth = 800,
-      windowHeight = 250,
+      windowHeight = 200,
       screenHeight = NSHeight(NSScreen.mainScreen().frame()),
       screenWidth = NSWidth(NSScreen.mainScreen().frame()),
       xPosition = (screenWidth/2) - (windowWidth/2),
       yPosition = (screenHeight) - (windowHeight/2)
+
+
+
 
 
   let emit = (type,body, callback)=>{
@@ -168,6 +206,7 @@ function PluginUI(){
   let _actions = {
     test                  : "test",
     setPickerValues       : "setPickerValues",
+    setPlaceholders       : "setPlaceholders",
     setSelectedOverride   : "setSelectedOverride",
     updateTextFieldContent: "updateTextFieldContent",
     saveActiveOverride    : "saveActiveOverride",
@@ -176,18 +215,27 @@ function PluginUI(){
 
 
   let _keyEvents = {
-    tabForward : "tabForward",
-    tabBackward: "tabBackward",
-    enter      : "enter",
-    escape     : "escape"
+    tabForward   : "tabForward",
+    tabBackward  : "tabBackward",
+    enter        : "enter",
+    escape       : "escape",
+    clickOverride: "clickOverride"
   }
+
+  let _settings = {
+    settingsKey:"userSettings",
+    lastRect: undefined
+  }
+
+  let settings 
 
 
   //these get assigned by QTO object which is responsible for handling these actions and notifying the UI.
-  this.tabForwardDelegate  = undefined
-  this.tabBackwardDelegate = undefined
-  this.enterDelegate       = undefined
-  this.escapeDelegate      = undefined
+  this.tabForwardDelegate    = undefined
+  this.tabBackwardDelegate   = undefined
+  this.enterDelegate         = undefined
+  this.escapeDelegate        = undefined
+  this.clickOverrideDelegate = undefined
 
 
   //event listeners
@@ -223,32 +271,83 @@ function PluginUI(){
         console.log(error)        
       }   
     })
+    
+    _ui.webContents.on(_keyEvents.clickOverride,(index,content)=>{
+      try {
+        this.clickOverrideDelegate(index,content)
+      } catch (error) {
+        console.log(error)        
+      }   
+    })
   }
 
   
 
   this.open = (callback)=>{
     if(_ui !== undefined) return
+    _settings = _getSettings() || _settings
+
+    //if we have a previous state for where the user had the window, we want to open it in the same place as last time, with the same size.
+    if(_settings.lastRect){
+      windowHeight = _settings.lastRect.height
+      windowWidth = _settings.lastRect.width
+      xPosition = _settings.lastRect.x
+      yPosition = _settings.lastRect.y
+    }  
     
     _ui = new WebView({
       identifier:"000",
       width:windowWidth,
       height:windowHeight,
+      // minWidth:290,
+      // minHeight:330,
       useContentSize: true,
       x: xPosition,
       y: yPosition,
       alwaysOnTop:true,
-      title:" ",
+      title:"Quick Text Override",
       backgroundColor:"#ffffffff"
     })
     _ui.loadURL(require("./index.html"))
-    
+    _ui.setAlwaysOnTop(true,"modal")
     _startListeners()
-    
+    _startListeningForWindowChanges()
+
     emit("SYNC_ACTIONS", _actions).then(
       ()    => {callback()},
       (err) => {error(err)}
     )
+  }
+
+  let _startListeningForWindowChanges = ()=>{
+    _ui.on("moved",()=>{
+      _saveWindowPosition()
+      
+    })
+
+    _ui.on("resize",()=>{
+      _saveWindowDimensions()
+
+    })
+  }
+ 
+  let _getSettings = ()=>{
+    return Settings.settingForKey(_settings.settingsKey)
+    
+  }
+
+  let _saveWindowPosition = ()=>{
+    let bounds = _ui.getBounds()
+    _settings.lastRect = bounds
+    Settings.setSettingForKey(_settings.settingsKey,_settings)
+
+  }
+
+  let _saveWindowDimensions = ()=>{
+    let bounds = _ui.getBounds()
+    _settings.lastRect = bounds
+    Settings.setSettingForKey(_settings.settingsKey,_settings)
+
   }
 
   this.close = ()=>{
@@ -257,12 +356,16 @@ function PluginUI(){
 
   this.syncKeyEvents = ()=>{
     emit("SYNC_KEYEVENTS",_keyEvents).then(
-      ()    => {console.log("just emitted SYNC EVENTS")},
+      ()    => {},
       (err) => {console.log(err)})
   }
 
   this.setPickerValues = (pickerValues)=>{
     emit(_actions.setPickerValues, pickerValues).then(()=>{},(err)=>{console.log(err)})
+  }
+
+  this.setPlaceholders = (placeholders)=>{
+    emit(_actions.setPlaceholders, placeholders).then(()=>{},(err)=>{console.log(err)})
   }
 
   this.setSelectedOverride = (index) =>{
@@ -274,46 +377,4 @@ function PluginUI(){
       emit(_actions.updateTextFieldContent, newContent).then(()=>{},(err)=>{console.log(err)})
   }
 }
-
-
-
-// function Alert(context){
-//   let viewWidth = 300, viewHeight = 60;
-
-//   let alert = NSAlert.alloc().init(),
-//       view  = NSView.alloc().initWithFrame(NSMakeRect(0, 0, viewWidth, viewHeight));
-  
-//   alert.setAccessoryView(view);
-//   alert.setIcon(NSImage.alloc().initByReferencingFile(context.plugin.urlForResourceNamed("icon.png").path()));
-  
-//   // Creating dialog buttons
-//   alert.addButtonWithTitle("Ok"),
-//   alert.addButtonWithTitle("Cancel");
-  
-  
-  
-//   //text field
-//   let textField = NSTextField.alloc().initWithFrame(NSMakeRect(0, 0, 300, 60));
-
-//   //focuses the text field automatcially
-//   alert.window().setInitialFirstResponder(textField)
-
-//   view.addSubview(textField)
-
-//   this.getCurrentValue = ()=> textField.stringValue()
-
-//   this.show = (title,initialValue='')=>{
-//     alert.setMessageText(title)
-//     textField.setStringValue(initialValue)
-//     return alert.runModal()
-//   }
-
-//   this.updateTitle = (value) => {
-//     alert.setMessageText(value)
-//   }
-
-//   this.updateDefaultString = (value) => {
-//     textField.setStringValue(value)
-//   }
-// }
 

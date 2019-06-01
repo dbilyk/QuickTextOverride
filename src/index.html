@@ -4,28 +4,73 @@
     <style>
       *{
         font-family: Arial, Helvetica, sans-serif;
+        
+      }
+
+      body{
+        margin:0;
+        position: absolute;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #00000033; 
+        background-color: #fafafa;
+
+      }
+
+      .headerSection{
+        display:flex;
+        flex-direction: row;
+        justify-content: flex-start; 
+        flex: 0 0 auto;
+        border-bottom:1px solid #eee;
+        background-image: linear-gradient(-135deg, #FFBCBC 0%, #FFE3A5 100%);
+      }
+
+      .headerSection img {
+        display:flex;
+        flex: 0 1 auto;
+        max-width:50px;
+        max-height: 35px;
+        margin-left:5px;
+        
       }
 
       .instructions{
-        color:#777;
-        margin:30px 30px 10px 30px;
-        margin-left: 30px;
-        font-size: 14px;
+        color:#fff;
+        margin-top:5px;
+        margin-left: 20px;
+        font-size: 12px;
+        
       }
+
 
       
       .labels{
-        margin-left:30px;
+        margin-top:10px;
+        margin-left:10px;
+        margin-right:5px;
+        min-height:40px;
+        display:flex;
+        flex-direction: row;
+        justify-content: space-evenly;
+        flex-wrap: wrap;
+        flex-shrink: 0;
+        flex-grow: 1;
+        
       }
 
       .labels button{
+        flex-grow:1;
         margin:0px 5px 10px 0;
-        border: 1px solid #cccccc;
-        border-radius: 5px;
+        border: 1px solid #00000011; 
+        border-radius: 3px;
         display: inline-block;
-        color:#777;
-        padding:5px;
-        box-shadow: 0 2px 4px 0 rgba(255, 255, 255, 0);
+        color:#aaa;
+        padding:5px 8px 5px 8px;
         background-color: #fff0;
         margin-right:5px;
         font-size:14px;
@@ -33,44 +78,63 @@
         transition:all 0.2s ease-in-out;
       }
 
+
+      .labels button:hover{
+        border: 1px solid #00000033; 
+      }
+
       .labels .active_override{
         border: 1px solid rgba(255, 255, 255, 0);
-        background-color: #0c5bb3;
-        color:white;
-        box-shadow: 0 2px 4px 0 #555;
+        background-color: #D9EAFF;
+        color:#00000088;
+        box-shadow: 0 1px 2px 0 #00000066;
         transition:all 0.2s ease-in-out;
+        z-index: 1000;
       }
 
-      .inputFlex{
-        display:flex;
-      }
 
       textarea {
-        padding: 10px;
+        padding: 3%;
+        padding-top:10px;
         font-size:14px;
-        margin-left:30px;
-        margin-right: 30px;
-        border:1px solid #ccc;
-        border-radius:5px;
-        width:80vw;
-        flex:1 1 auto;
-        justify-self: center;
-        height:50px;
+        border:none;
+        border-top:1px solid #eee;
+        flex:1 1 100%;
+        bottom:0px;
+        box-shadow: 0 4px 4px -4px #00000033 inset;
         
+        
+      }
+      textarea:focus{
+        outline:none;
+        
+      }
+
+      .hide{
+        transition:opacity 0.2s ease-out;
+        opacity:0;
+      }
+      
+      .show{
+        transition:opacity 0.2s ease-out;
+        opacity:1;
       }
 
     </style>
   </head>
   <body>
-    <div class= "instructions"><strong>Tab:</strong> Go to next text. <br> <strong>Shift + Tab:</strong> Go to previous text.</div>
-
+    <!-- <div class="headerSection">
+      <img src = "../icon.png" alt = "Quick Text Override logo" />
+      <div class= "instructions hide"><strong>Tab:</strong> Go to next text. <br> <strong>Shift + Tab:</strong> Go to previous text.</div>
+    </div> -->
+    
     <div class="labels">
       
     </div>
+    
+   
+    <textarea placeholder="hello" autofocus></textarea>
 
-    <div class=inputFlex>
-      <textarea placeholder="hello" autofocus></textarea>
-    </div>
 
     <script>
       let debug = (arg)=>{
@@ -92,7 +156,6 @@
             break;
 
           case "SYNC_KEYEVENTS":
-            console.log(action.body)
             _keyEvents = action.body
             ui.startSendingKeyEvents()
             break;
@@ -100,7 +163,11 @@
           case _actions.setPickerValues:
             ui.setPickerValues(action.body)
             break;
-          
+         
+          case _actions.setPlaceholders:
+            ui.setPlaceholders(action.body)
+            break;
+
           case _actions.setSelectedOverride:
             ui.setSelectedOverride(action.body)
             break;
@@ -110,7 +177,7 @@
             break;
 
           default:
-            debug("no matching event!");
+            console.log("no matching event!");
             break;
         }
       }
@@ -118,12 +185,23 @@
 
       function QTO_UI(){
         
-        let _pickerValues = []
-        let _activeIndex = undefined
-        let _activeClass = "active_override"
+        let _pickerValues  = [],
+            _placeholders  = [],
+            _activeIndex   = undefined,
+            _activeClass   = "active_override",
+            labelContainer = document.getElementsByClassName("labels")[0],
+            textField      = document.getElementsByTagName("textarea")[0],
+            logo           = document.querySelector(".headerSection img"),
+            instructions   = document.querySelector(".instructions")
 
-        let labelContainer = document.getElementsByClassName("labels")[0]
-        let textField = document.getElementsByTagName("textarea")[0]
+        
+        // logo.addEventListener("mouseover",()=>{
+        //   instructions.classList.replace("hide","show")
+        // })
+
+        // logo.addEventListener("mouseout",()=>{
+        //   instructions.classList.replace("show","hide")
+        // })
 
         this.startSendingKeyEvents = ()=>{
           //notify "backend" about key events
@@ -147,7 +225,22 @@
             if(e.code == "Escape"){
               window.postMessage(_keyEvents.escape)
             }
+
+            // if(e.ctrlKey && e.shiftKey && e.code == "t"){
+            //   window.close()
+            // }
           })
+
+          document.addEventListener("click",(e)=>{
+            for(let i = 0; i<_pickerValues.length;i++){
+              if(e.target == _pickerValues[i].element){
+                let currentContent = textField.value || ""
+                window.postMessage(_keyEvents.clickOverride, i, currentContent)
+                break;
+              }
+            }
+          })
+
         }
 
         this.setPickerValues = (pickerValues) =>{
@@ -155,11 +248,6 @@
           pickerValues.map((v,i)=>{
             let newElement = document.createElement("button")
             newElement.innerText = v
-            
-            if(i == 0){
-              newElement.classList.add(_activeClass)
-              _activeIndex = 0
-            }
 
             labelContainer.appendChild(newElement)
 
@@ -188,16 +276,21 @@
           else{
             throw "invalid argument to setActiveOverride.  Argument must be an index or an override name."
           }
+
+          //this is hacky to tack this on, but its guaranteed that the active index is not stale.
+          textField.placeholder = _placeholders[_activeIndex]
         }
 
         this.setContent = (newContent)=>{
           textField.value = newContent
+          textField.select()
+        }
+        this.setPlaceholders = (placeholders)=>{
+          _placeholders = placeholders
+          console.log("here")
         }
       }
 
-      
-      
-      
     </script>
   </body>
 </html>
