@@ -8,12 +8,12 @@
       "shortcut": "shift + control + T"
     },
     {
-      "name":"Selection change",
-      "identifier":"quicktextoverride.selection-identifier",
+      "name":"Selection Start",
+      "identifier":"quicktextoverride.selectionStart-identifier",
       "script":"./main.js",
       "handlers":{
         "actions":{
-          "SelectionChanged.finish":"onSelectionChanged"
+          "SelectionChanged.begin":"onSelectionChangeStart"
         }
       }
     }

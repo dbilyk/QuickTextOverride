@@ -1,3 +1,22 @@
+
+
+// TO DO: 
+// BUG: changing selection when selected symbol has symbol overrides causes unexplained removal of said symbols, other weird side effects.
+//this is liekly related to the lastActiveOverride calls to rstore the last active symbol text to its most recent value.
+
+//BUG: running the plugin command to close the window does not restore the last active symbol text... it kees the bars...
+
+//BUG: 'close' button on webview does not restore override text to last known value.
+
+
+
+
+
+
+
+
+
+
 let sketch = require("sketch")
 let WebView = require("sketch-module-web-view")
 var Shape =  require("sketch/dom").Shape
@@ -6,14 +25,38 @@ var Settings = require('sketch/settings')
 
 let pluginInstance
 
+function Utilities(){
+  this.checkSelectionForSymbols = ()=>{
+    let selection = sketch.getSelectedDocument().selectedLayers.layers 
+
+    for(let i = 0; i < selection.length; i++){
+      if(selection[i].type != "SymbolInstance") {
+        break
+      }
+      else{
+        return true;
+      }
+    }
+  }
+  this.restoreLastKnownOverride = ()=>{
+    let lastActiveOverride       = Settings.settingForKey("activeOverride")
+    let lastActiveSymbolInstance = sketch.getSelectedDocument().getLayerWithID(lastActiveOverride.symbolInstanceID)
+    lastActiveSymbolInstance.overrides[lastActiveOverride.index].value = lastActiveOverride.value
+
+  }
+}  
+
+
 //need to convert launching and closing into separate processes
 export default function() {
+  let util = new Utilities()
   let existingWebView = WebView.fromId("000")
   if(existingWebView){
+    util.restoreLastKnownOverride()
     existingWebView._panel.close()
   }
   else{
-    pluginInstance = new QuickTextOverride()
+    let pluginInstance = new QuickTextOverride()
     pluginInstance.assembleTextOverrides()
   
     if(pluginInstance.getOverrideList().length > 0){
@@ -24,17 +67,26 @@ export default function() {
   }
 }
 
-export function onSelectionChanged(){
-  let existingWebView = WebView.fromId("000")
-  if(!existingWebView) {return}
-  else{
-    existingWebView._panel.close()
-    pluginInstance = new QuickTextOverride()
-    pluginInstance.assembleTextOverrides()
+
+//TO DO >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+//add listener for "SelectionChange.begin" and set the last selected override to the value found at "activeOverride" key.  
+//The value at this key needs to have string and override index. 
+export function onSelectionChangeStart(){
+  let util = new Utilities(),
+      existingWebView = WebView.fromId("000")
+
+  if(!existingWebView) return
+  if(!util.checkSelectionForSymbols()) return
+
+  existingWebView._panel.close()
+  let pluginInstance = new QuickTextOverride()
+  pluginInstance.assembleTextOverrides()
   
-    if(pluginInstance.getOverrideList().length > 0){
-      pluginInstance.openWebView()
-    }
+  //restore the last active override to it's value before the value was replaced with "Active" visualization.
+  util.restoreLastKnownOverride()
+  
+  if(pluginInstance.getOverrideList().length > 0){
+    pluginInstance.openWebView()
   }
 }
 
@@ -51,19 +103,15 @@ function QuickTextOverride(){
 
   let currentOverrideIndex,
       textOverrides = [],
-      // overrideOutline = new Shape({
-      //   name:"currentOverride",
-      //   locked: true,
-      //   style:{
-      //     borders:[{color:'#4466FF44',thickness:2}]
-      //   }
-      // }),
       pluginUI = new PluginUI()
 
   this.assembleTextOverrides = () => {
     let selection = getSelectedLayers()
 
-    for(let i = 0; i < selection.length; i++){
+
+//remove support for multiple layers selection <<<<<<<FEATURE OFF<<<<<<<<<<<<<
+//change to i < selection.length to enable multiple selection
+    for(let i = 0; i < 1; i++){
       if(selection[i].type != "SymbolInstance") break
       
       if(selection[i].overrides.length == 0) break
@@ -76,7 +124,10 @@ function QuickTextOverride(){
             label:currentOverride.affectedLayer.name, 
             override:currentOverride,
             currentValue: currentOverride.value,
-            defaultValue: currentOverride.affectedLayer.text
+            defaultValue: currentOverride.affectedLayer.text,
+            instanceID: selection[i].id,
+            instanceName: selection[i].name,
+            instanceOverrideIndex: j
 
           })
         }
@@ -109,30 +160,61 @@ function QuickTextOverride(){
       pluginUI.setPickerValues(pickerValues)
       pluginUI.setPlaceholders(placeholders)
       pluginUI.setSelectedOverride(currentOverrideIndex)
+      this.saveActiveOverrideValueToLocalStorage()
       visualizeActiveOverride()
       pluginUI.setTextFieldContent(textOverrides[currentOverrideIndex].currentValue)
 
   }
   
-  // this.addOutlineToDocument = ()=>{
-  //   this.getActivePage().layers.push(overrideOutline)
-  // }
+  
+  let assignDelegatesToUI = ()=>{
+    //listen for key events and respond to them.
+    pluginUI.tabForwardDelegate    = onTabForward
+    pluginUI.tabBackwardDelegate   = onTabBackward
+    pluginUI.enterDelegate         = onEnter
+    pluginUI.escapeDelegate        = onEscape
+    pluginUI.clickOverrideDelegate = onClickOverride
+    pluginUI.valueChangedDelegate  = onActiveOverrideChanged
+  }
 
-
-  // this.getActivePage = ()=>{
-  //   return sketch.fromNative(context.document).pages.find((v)=>v.selected)
-  // }
-
-
-
-  // this.positionOverrideOutlineOnCurrentOverride = ()=>{
-
-  // }
-
-  // this.getLayerFrameInPageSpace = (layer)=>{
+  let onTabForward = (contentBeforeChange)=>{
+    this.saveCurrentOverride(contentBeforeChange)
+    this.goToNextOverride()
+    this.saveActiveOverrideValueToLocalStorage()
+    visualizeActiveOverride()
     
-  // }
+  }
+  
+  
+  let onTabBackward = (contentBeforeChange)=>{
+    this.saveCurrentOverride(contentBeforeChange)
+    this.goToPreviousOverride()
+    this.saveActiveOverrideValueToLocalStorage()
+    visualizeActiveOverride()
+    
+  }
+  
+  
+  let onEnter = (contentBeforeClose)=>{
+    this.saveCurrentOverride(contentBeforeClose)
+    pluginUI.close()
+    
+  }
+  
+  let onEscape = ()=>{
+    textOverrides[currentOverrideIndex].override.value = textOverrides[currentOverrideIndex].currentValue 
+  }
+  
+  let onClickOverride = (index,currentContent)=>{
+    this.saveCurrentOverride(currentContent)
+    this.goToOverride(index)
+    this.saveActiveOverrideValueToLocalStorage()
+    visualizeActiveOverride()
+  }
 
+  let onActiveOverrideChanged = (value)=>{
+    this.saveActiveOverrideValueToLocalStorage(value)
+  }
 
   this.saveCurrentOverride = (content)=>{
     textOverrides[currentOverrideIndex].override.value = content
@@ -160,55 +242,50 @@ function QuickTextOverride(){
 
   
 
-  let assignDelegatesToUI = ()=>{
-    //listen for key events and respond to them.
-    pluginUI.tabForwardDelegate    = onTabForward
-    pluginUI.tabBackwardDelegate   = onTabBackward
-    pluginUI.enterDelegate         = onEnter
-    pluginUI.escapeDelegate        = onEscape
-    pluginUI.clickOverrideDelegate = onClickOverride
-  }
-
-  let onTabForward = (contentBeforeChange)=>{
-    this.saveCurrentOverride(contentBeforeChange)
-    this.goToNextOverride()
-    visualizeActiveOverride()
-    
-  }
-  
-  
-  let onTabBackward = (contentBeforeChange)=>{
-    this.saveCurrentOverride(contentBeforeChange)
-    this.goToPreviousOverride()
-    visualizeActiveOverride()
-    
-  }
-  
-  
-  let onEnter = (contentBeforeClose)=>{
-    this.saveCurrentOverride(contentBeforeClose)
-    pluginUI.close()
-    
-  }
-  
-  let onEscape = ()=>{
-    textOverrides[currentOverrideIndex].override.value = textOverrides[currentOverrideIndex].currentValue 
-  }
-  
-  let onClickOverride = (index,currentContent)=>{
-    this.saveCurrentOverride(currentContent)
-    this.goToOverride(index)
-    visualizeActiveOverride()
-  }
   
   let visualizeActiveOverride = ()=>{
     textOverrides[currentOverrideIndex].override.value = '▂▂▂▂▂▂▂▂'
   }
+
+  this.saveActiveOverrideValueToLocalStorage = (Value)=>{
+    let currentOverrideData = textOverrides[currentOverrideIndex]
+
+    if(Value){
+      Settings.setSettingForKey("activeOverride",{
+        value           : Value,
+        index           : currentOverrideData.instanceOverrideIndex,
+        reference       : currentOverrideData.override,
+        symbolInstanceID: currentOverrideData.instanceID
+      }) 
+    }
+    else{
+      Settings.setSettingForKey("activeOverride",{
+        value           : currentOverrideData.override.value,
+        index           : currentOverrideData.instanceOverrideIndex,
+        reference       : currentOverrideData.override,
+        symbolInstanceID: currentOverrideData.instanceID
+      })
+
+    }
+  }
 }
+
+//__________________________________________________________________________________________________________________________
+//__________________________________________________________________________________________________________________________
+//__________________________________________________________________________________________________________________________
+//__________________________________________________________________________________________________________________________
+//__________________________________________________________________________________________________________________________
+//__________________________________________________________________________________________________________________________
+
+
+
+
+
+
 
 
 function PluginUI(){
-  console.log("_______________________________________________________________")
+  //console.log("__________________________________________________________________________________________________________________________")
   let _ui
   let windowWidth  = 800,
       windowHeight = 200,
@@ -250,7 +327,8 @@ function PluginUI(){
     tabBackward  : "tabBackward",
     enter        : "enter",
     escape       : "escape",
-    clickOverride: "clickOverride"
+    clickOverride: "clickOverride",
+    currentValueChanged: "valueChanged"
   }
 
   let _settings = {
@@ -265,6 +343,7 @@ function PluginUI(){
   this.enterDelegate         = undefined
   this.escapeDelegate        = undefined
   this.clickOverrideDelegate = undefined
+  this.valueChangedDelegate  = undefined
 
 
   //event listeners
@@ -308,6 +387,18 @@ function PluginUI(){
         console.log(error)        
       }   
     })
+
+    _ui.webContents.on(_keyEvents.currentValueChanged,(value)=>{
+      try{
+        this.valueChangedDelegate(value)
+      }
+      catch (error){
+        console.log(error)
+      }
+
+    })
+
+    
   }
 
   
@@ -365,6 +456,11 @@ function PluginUI(){
     _ui.on("resize",()=>{
       _saveWindowDimensions()
 
+    })
+
+    _ui.on("closed",()=>{
+      let util = new Utilities()
+      util.restoreLastKnownOverride()  
     })
   }
  

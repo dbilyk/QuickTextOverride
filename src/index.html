@@ -99,12 +99,12 @@
       }
 
       .hide {
-        transition: opacity 0.2s ease-out;
+        transition: opacity 0.1s ease-out;
         opacity: 0;
       }
 
       .show {
-        transition: opacity 0.2s ease-out;
+        transition: opacity 0.1s ease-out;
         opacity: 1;
       }
 
@@ -115,8 +115,8 @@
         position: absolute;
         width: 30px;
         height: 30px;
-        top:45vh;
-        left:45vw;
+        top: 45vh;
+        left: 45vw;
         transform: scale(0.5);
       }
       .lds-spinner div {
@@ -271,7 +271,7 @@
           textField = document.getElementsByTagName("textarea")[0],
           logo = document.querySelector(".headerSection img"),
           instructions = document.querySelector(".instructions"),
-          spinner = document.querySelector(".lds-spinner")
+          spinner = document.querySelector(".lds-spinner");
 
         // logo.addEventListener("mouseover",()=>{
         //   instructions.classList.replace("hide","show")
@@ -281,11 +281,11 @@
         //   instructions.classList.replace("show","hide")
         // })
 
-        this.stopSpinner = ()=>{
-          labelContainer.classList.replace("hide","show")
-          textField.classList.replace("hide","show")
-          spinner.classList.replace("show","hide")
-        }
+        this.stopSpinner = () => {
+          labelContainer.classList.replace("hide", "show");
+          textField.classList.replace("hide", "show");
+          spinner.classList.replace("show", "hide");
+        };
 
         this.startSendingKeyEvents = () => {
           //notify "backend" about key events
@@ -311,10 +311,6 @@
             if (e.altKey && e.code == "Enter") {
               this.insertNewLine(textField);
             }
-
-            // if(e.ctrlKey && e.shiftKey && e.code == "t"){
-            //   window.close()
-            // }
           });
 
           document.addEventListener("click", e => {
@@ -326,10 +322,24 @@
               }
             }
           });
+
+          document.addEventListener("keyup", e => {
+            var textKey = 
+            (e.keyCode > 47 && e.keyCode < 58)   || // number keys
+            e.keyCode == 32 || e.keyCode == 13   || // spacebar & return key(s) (if you want to allow carriage returns)
+            (e.keyCode > 64 && e.keyCode < 91)   || // letter keys
+            (e.keyCode > 95 && e.keyCode < 112)  || // numpad keys
+            (e.keyCode > 185 && e.keyCode < 193) || // ;=,-./` (in order)
+            (e.keyCode > 218 && e.keyCode < 223);   // [\]' (in order)
+            
+            if(textKey){
+              window.postMessage(_keyEvents.currentValueChanged, textField.value)
+            }
+          });
         };
 
         this.setPickerValues = pickerValues => {
-          this.stopSpinner()
+          this.stopSpinner();
 
           _pickerValues = [];
           this.clearLabelContainer();
