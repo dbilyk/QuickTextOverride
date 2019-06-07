@@ -1,14 +1,7 @@
 
 
 // TO DO: 
-// BUG: changing selection when selected symbol has symbol overrides causes unexplained removal of said symbols, other weird side effects.
-//this is liekly related to the lastActiveOverride calls to rstore the last active symbol text to its most recent value.
-
-//BUG: running the plugin command to close the window does not restore the last active symbol text... it kees the bars...
-
-//BUG: 'close' button on webview does not restore override text to last known value.
-
-
+//BUG: looks like last known symbol value not getting updated when "delete" key is sent from webview.  Add delete key on web view side.
 
 
 
@@ -196,8 +189,8 @@ function QuickTextOverride(){
   
   
   let onEnter = (contentBeforeClose)=>{
-    this.saveCurrentOverride(contentBeforeClose)
     pluginUI.close()
+    this.saveCurrentOverride(contentBeforeClose)
     
   }
   
@@ -260,7 +253,7 @@ function QuickTextOverride(){
     }
     else{
       Settings.setSettingForKey("activeOverride",{
-        value           : currentOverrideData.override.value,
+        value           : currentOverrideData.currentValue,
         index           : currentOverrideData.instanceOverrideIndex,
         reference       : currentOverrideData.override,
         symbolInstanceID: currentOverrideData.instanceID

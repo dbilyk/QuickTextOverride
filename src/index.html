@@ -330,7 +330,8 @@
             (e.keyCode > 64 && e.keyCode < 91)   || // letter keys
             (e.keyCode > 95 && e.keyCode < 112)  || // numpad keys
             (e.keyCode > 185 && e.keyCode < 193) || // ;=,-./` (in order)
-            (e.keyCode > 218 && e.keyCode < 223);   // [\]' (in order)
+            (e.keyCode > 218 && e.keyCode < 223) || // [\]' (in order)
+            e.key == "Backspace"
             
             if(textKey){
               window.postMessage(_keyEvents.currentValueChanged, textField.value)
