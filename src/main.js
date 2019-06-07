@@ -460,7 +460,7 @@ function PluginUI(){
 
     _ui.on("closed",()=>{
       let util = new Utilities()
-      util.restoreLastKnownOverride()  
+      util.restoreLastKnownOverride()
     })
   }
  
