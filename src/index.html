@@ -19,6 +19,11 @@
         background-color: #fafafa;
       }
 
+      h4{
+        margin-bottom:10px;
+        
+      }
+
       .headerSection {
         display: flex;
         flex-direction: row;
@@ -58,15 +63,15 @@
 
       .labels button {
         flex-grow: 1;
-        margin: 0px 5px 10px 0;
+        margin: 0px 5px 5px 0;
         border: 1px solid #00000011;
-        border-radius: 3px;
+        border-radius: 6px;
         display: inline-block;
-        color: #aaa;
+        color: #888;
         padding: 5px 8px 5px 8px;
         background-color: #fff0;
         margin-right: 5px;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 400;
         transition: all 0.2s ease-in-out;
       }
@@ -84,10 +89,55 @@
         z-index: 1000;
       }
 
+      .info-icon, .close-icon{
+        position:absolute;
+        display:block;
+        width:24px;
+        height:24px;
+        bottom:10px;
+        right:10px;
+        fill:#aaa;
+      }
+
+      .hide-modal{
+        transition:all 0.2s ease-in-out;
+        opacity:0;
+        transform: scale(0,0);
+        border-radius:20px;
+        
+      }
+
+      .show-modal{
+        transition:all 0.2s ease-in-out;
+        opacity:1;
+        transform: scale(1,1);
+        border-radius:4px;
+      }
+
+      .info-modal{
+        transform-origin: 100vw 100vh;
+        position: absolute;
+        top:4px;
+        left:4px;
+        bottom:4px;
+        right:4px;
+        z-index: 1000000;
+        padding:10px;
+        font-size:12px;
+        background-color: #fff;
+        box-shadow: 0 3px 10px #555;
+        color:#555;
+
+      }
+
+      .info-modal:last-child{
+        color:#888;
+      }
+
       textarea {
         padding: 3%;
         padding-top: 10px;
-        font-size: 14px;
+        font-size: 12px;
         border: none;
         border-top: 1px solid #eee;
         flex: 1 1 100%;
@@ -216,6 +266,32 @@
 
     <textarea class="hide" placeholder="" autofocus></textarea>
 
+    <div class = "info-modal hide-modal">
+      <svg class = "close-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30px" height="30px">
+          <path d="M15,3C8.373,3,3,8.373,3,15c0,6.627,5.373,12,12,12s12-5.373,12-12C27,8.373,21.627,3,15,3z M16.414,15 c0,0,3.139,3.139,3.293,3.293c0.391,0.391,0.391,1.024,0,1.414c-0.391,0.391-1.024,0.391-1.414,0C18.139,19.554,15,16.414,15,16.414 s-3.139,3.139-3.293,3.293c-0.391,0.391-1.024,0.391-1.414,0c-0.391-0.391-0.391-1.024,0-1.414C10.446,18.139,13.586,15,13.586,15 s-3.139-3.139-3.293-3.293c-0.391-0.391-0.391-1.024,0-1.414c0.391-0.391,1.024-0.391,1.414,0C11.861,10.446,15,13.586,15,13.586 s3.139-3.139,3.293-3.293c0.391-0.391,1.024-0.391,1.414,0c0.391,0.391,0.391,1.024,0,1.414C19.554,11.861,16.414,15,16.414,15z"/>
+      </svg>
+
+      <p>
+        <h4>Quick Text Override</h4>
+        Created by Dmitri Bilyk
+      </p>
+      <p>
+        <h4>Shortcuts</h4>
+        Tab: <span>Next override</span><br>
+        Shift + Tab: <span>Previous override</span><br>
+        Enter: <span>Save and close</span><br>
+      </p>
+      <p>
+        Note: Changing selection while the plugin is open will save the current value before changing to the next symbol.
+      </p>
+    </div>
+
+    
+      <svg class = "info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24px" height="24px">
+          <path d="M12,2C6.477,2,2,6.477,2,12s4.477,10,10,10s10-4.477,10-10S17.523,2,12,2z M13,17h-2v-6h2V17z M13,9h-2V7h2V9z"/>
+      </svg>
+
+    
     <script>
       let debug = arg => {
         document.getElementsByTagName("body")[0].append(arg.toString());
@@ -263,15 +339,19 @@
       function QTO_UI() {
         //picker values are good.  Still failing at line 281 for some reason.D!mab1lyk3336
 
-        let _pickerValues = [],
-          _placeholders = [],
-          _activeIndex = undefined,
-          _activeClass = "active_override",
-          labelContainer = document.getElementsByClassName("labels")[0],
-          textField = document.getElementsByTagName("textarea")[0],
-          logo = document.querySelector(".headerSection img"),
-          instructions = document.querySelector(".instructions"),
-          spinner = document.querySelector(".lds-spinner");
+        let _pickerValues  = [],
+            _placeholders  = [],
+            _activeIndex   = undefined,
+            _activeClass   = "active_override",
+            labelContainer = document.getElementsByClassName("labels")[0],
+            textField      = document.getElementsByTagName("textarea")[0],
+            logo           = document.querySelector(".headerSection img"),
+            instructions   = document.querySelector(".instructions"),
+            spinner        = document.querySelector(".lds-spinner"),
+            infoModal      = document.querySelector(".info-modal"),
+            closeButton    = document.querySelectorAll("path")[0],
+            infoButton     = document.querySelectorAll("path")[1]
+          
 
         // logo.addEventListener("mouseover",()=>{
         //   instructions.classList.replace("hide","show")
@@ -321,6 +401,17 @@
                 break;
               }
             }
+            
+            
+            if(e.target == infoButton || e.target == infoButton.parentElement){
+              infoModal.classList.replace("hide-modal","show-modal")
+            }
+
+            if(e.target == closeButton || e.target == closeButton.parentElement){
+              infoModal.classList.replace("show-modal", "hide-modal")
+            }
+
+
           });
 
           document.addEventListener("keyup", e => {
