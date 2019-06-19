@@ -1,5 +1,9 @@
 # QuickTextOverride
 
+
+![Quick Text Override usage gif](https://raw.githubusercontent.com/dbilyk/QuickTextOverride/master/sketch%20icons/QTO%20usage%20gif.gif)
+
+
 ## Installation
 
 - [Download](../../releases/latest/download/quicktextoverride.sketchplugin.zip) the latest release of the plugin
